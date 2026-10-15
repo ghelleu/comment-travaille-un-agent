@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Comment travaille un agent IA</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Scène composée en 1920 × 1080, mise à l'échelle de l'écran par app.js -->
+  <div id="scene" class="scene">
+    <header class="haut">
+      <p class="surtitre"><span class="puce-ronde"></span><span id="surtitre"></span></p>
+      <p class="compteur" id="compteur"></p>
+    </header>
+
+    <!-- Colonne de texte -->
+    <section class="texte" id="texte" aria-live="polite">
+      <p class="rubrique" id="rubrique"></p>
+      <h1 id="titre-slide"></h1>
+      <p class="corps" id="corps"></p>
+      <div class="exemple" id="exemple">
+        <p class="micro">Dans notre exemple</p>
+        <p id="exemple-texte"></p>
+      </div>
+      <div class="hermes" id="hermes">
+        <p class="micro"><span>Dans la vraie vie · Hermes</span><span id="hermes-source"></span></p>
+        <p id="hermes-texte"></p>
+      </div>
+    </section>
+
+    <!-- Schéma : construit par app.js à partir de contenu.js -->
+    <svg id="schema" class="schema" viewBox="0 0 1920 1080" role="img" aria-label="Schéma de l'architecture agentique"></svg>
+
+    <!-- Navigation -->
+    <nav class="nav" aria-label="Navigation">
+      <button type="button" id="prec" class="rond" aria-label="Slide précédente"><svg viewBox="0 0 20 20"><path d="M12 4l-6 6 6 6"/></svg></button>
+      <div class="progression" id="progression"></div>
+      <button type="button" id="suiv" class="rond plein" aria-label="Slide suivante"><svg viewBox="0 0 20 20"><path d="M8 4l6 6-6 6"/></svg></button>
+    </nav>
+    <p class="aide"><kbd>←</kbd><kbd>→</kbd> naviguer · <kbd>F</kbd> plein écran</p>
+    <p class="source" id="source"></p>
+  </div>
+
+  <script src="contenu.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

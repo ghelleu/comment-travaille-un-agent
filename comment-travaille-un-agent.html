@@ -1,0 +1,672 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Comment travaille un agent IA</title>
+  <style>
+/*
+  COMMENT TRAVAILLE UN AGENT IA — feuille de style
+  Couleurs et tailles réunies dans :root. Scène 1920 × 1080 mise à l'échelle.
+*/
+:root {
+  --police: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --plan: #eeeeea;
+  --scene: #f5f5f2;
+  --halo: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f4f4f1;
+  --encre: #0b0b0b;
+  --encre-2: #52514e;
+  --encre-3: #898781;
+  --filet: #e4e3dd;
+  --bord: rgba(11, 11, 11, 0.09);
+  --ombre: 0 1px 2px rgba(20, 20, 15, 0.05), 0 10px 28px rgba(20, 20, 15, 0.07);
+  --accent: #2a78d6;          /* ce qui est en jeu sur la slide */
+  --accent-doux: #e8f1fc;
+  --critique: #d03b3b;        /* pannes */
+  --critique-doux: #fbeaea;
+  --repos: #c9c8c1;           /* flux au repos */
+
+  --t-titre: 58px;
+  --t-corps: 25px;
+  --t-exemple: 20px;
+  --t-hermes: 17px;
+  --t-micro: 12px;
+
+  --duree: .55s;              /* transitions entre slides */
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--plan); font-family: var(--police); color: var(--encre); -webkit-font-smoothing: antialiased; }
+
+.scene {
+  position: absolute; left: 50%; top: 50%;
+  width: 1920px; height: 1080px;
+  transform: translate(-50%, -50%) scale(var(--k, 1));
+  background: radial-gradient(ellipse 55% 60% at 70% 48%, var(--halo) 0%, var(--scene) 72%);
+  overflow: hidden;
+}
+
+/* ——— En-tête ——— */
+.haut { position: absolute; left: 80px; right: 60px; top: 46px; display: flex; justify-content: space-between; align-items: center; }
+.surtitre { margin: 0; display: flex; gap: 10px; align-items: center; font-size: var(--t-micro); font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--encre-3); }
+.puce-ronde { width: 7px; height: 7px; border-radius: 50%; background: var(--encre); }
+.compteur { margin: 0; font-size: 14px; font-weight: 600; color: var(--encre-3); font-variant-numeric: tabular-nums; }
+.compteur b { color: var(--encre); }
+
+/* ——— Colonne de texte ——— */
+.texte { position: absolute; left: 80px; top: 150px; width: 680px; }
+.texte > * { transition: opacity var(--duree) ease, transform var(--duree) ease; }
+.texte.change > * { opacity: 0; transform: translateY(14px); }
+.rubrique { margin: 0 0 16px; font-size: 14px; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+.texte h1 { margin: 0 0 26px; font-size: var(--t-titre); line-height: 1.04; font-weight: 680; letter-spacing: -0.03em; }
+.corps { margin: 0 0 26px; font-size: var(--t-corps); line-height: 1.45; color: var(--encre); }
+.micro { margin: 0 0 8px; font-size: var(--t-micro); font-weight: 650; letter-spacing: .12em; text-transform: uppercase; color: var(--encre-3); display: flex; justify-content: space-between; }
+.exemple { margin: 0 0 18px; padding: 4px 0 4px 20px; border-left: 3px solid var(--accent); }
+.exemple p:last-child { margin: 0; font-size: var(--t-exemple); line-height: 1.45; color: var(--encre-2); font-style: italic; }
+.hermes { padding: 16px 20px; background: var(--surface); border: 1px solid var(--bord); border-radius: 14px; box-shadow: var(--ombre); }
+.hermes p:last-child { margin: 0; font-size: var(--t-hermes); line-height: 1.5; color: var(--encre-2); }
+
+/* ——— Navigation ——— */
+.nav { position: absolute; left: 80px; bottom: 56px; display: flex; align-items: center; gap: 18px; }
+.rond { width: 52px; height: 52px; border-radius: 50%; border: 1px solid var(--bord); background: var(--surface); display: grid; place-items: center; cursor: pointer; box-shadow: var(--ombre); }
+.rond svg { width: 20px; height: 20px; fill: none; stroke: var(--encre); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.rond.plein { background: var(--encre); border-color: var(--encre); }
+.rond.plein svg { stroke: #fff; }
+.rond:disabled { opacity: .35; cursor: default; }
+.rond:focus-visible, .progression button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.progression { display: flex; gap: 6px; }
+.progression button { width: 34px; height: 6px; padding: 0; border: 0; border-radius: 3px; background: #dcdbd5; cursor: pointer; transition: background .3s, width .3s; }
+.progression button.vu { background: #a3a29b; }
+.progression button[aria-current="step"] { background: var(--accent); width: 56px; }
+.aide { position: absolute; left: 80px; bottom: 26px; margin: 0; font-size: 12px; color: var(--encre-3); }
+.source { position: absolute; right: 60px; bottom: 26px; margin: 0; font-size: 12px; color: var(--encre-3); }
+kbd { font: 600 11px var(--police); color: var(--encre-2); background: var(--surface); border: 1px solid var(--bord); border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; margin-right: 3px; }
+
+/* ——— Schéma ——— */
+.schema { position: absolute; inset: 0; width: 1920px; height: 1080px; }
+.schema text { font-family: var(--police); }
+
+.piece { transition: opacity var(--duree) ease, transform var(--duree) ease; transform-box: fill-box; transform-origin: center; }
+.piece.cachee { opacity: 0; transform: translateY(10px) scale(.97); }
+.piece.retrait { opacity: .32; }
+.piece-fond { fill: var(--surface); stroke: var(--bord); stroke-width: 1; transition: stroke .4s, fill .4s; }
+.piece.accent .piece-fond { stroke: var(--accent); stroke-width: 1.6; }
+.piece-titre { fill: var(--encre); font-size: 19px; font-weight: 650; }
+.piece-sous { fill: var(--encre-3); font-size: 13.5px; }
+.piece-pastille { fill: var(--encre); transition: fill .4s; }
+.piece.accent .piece-pastille { fill: var(--accent); }
+.ligne-filet { stroke: var(--filet); }
+.ligne-texte { fill: var(--encre-2); font-size: 14.5px; }
+.ligne-etat { fill: var(--critique); font-size: 12.5px; font-weight: 650; }
+.ligne-panne { transition: opacity var(--duree) ease; }
+.ligne-panne.cachee { opacity: 0; }
+.ligne-panne .ligne-texte { fill: var(--critique); }
+.ligne-croix circle { fill: var(--critique-doux); stroke: var(--critique); stroke-width: 1.2; }
+.ligne-croix path { stroke: var(--critique); stroke-width: 1.5; stroke-linecap: round; }
+.piece.en-panne .piece-fond { stroke: var(--critique); stroke-dasharray: 5 4; stroke-width: 1.5; }
+
+/* La boucle de l'agent */
+.anneau-fond { fill: var(--surface); stroke: var(--bord); }
+.anneau { fill: none; stroke: var(--filet); stroke-width: 2; }
+.piece.accent .anneau { stroke: #b8d2f3; }
+.anneau-fleche { fill: none; stroke: var(--encre-3); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.agent-titre { fill: var(--encre); font-size: 30px; font-weight: 700; letter-spacing: -.02em; }
+.agent-sous { fill: var(--encre-3); font-size: 14px; }
+.etape-boucle rect { fill: var(--surface); stroke: var(--bord); transition: fill .3s, stroke .3s; }
+.etape-boucle text { fill: var(--encre-2); font-size: 14px; font-weight: 650; transition: fill .3s; }
+.etape-boucle.active rect { fill: var(--accent); stroke: var(--accent); }
+.etape-boucle.active text { fill: #fff; }
+.orbite { fill: var(--accent); }
+.orbite-halo { fill: var(--accent); opacity: .18; }
+
+/* Flux */
+.flux path { fill: none; }
+.flux-trait { stroke: var(--repos); stroke-width: 1.3; transition: opacity var(--duree), stroke .4s, stroke-width .4s; }
+.flux.cache { opacity: 0; }
+.flux.retrait .flux-trait { opacity: .35; }
+.flux.actif .flux-trait { stroke: var(--accent); stroke-width: 2.4; }
+.flux-perles { display: none; stroke: var(--accent); stroke-width: 4; stroke-linecap: round; stroke-dasharray: .1 18; }
+.flux.actif .flux-perles { display: inline; animation: perles 1.1s linear infinite; }
+@keyframes perles { to { stroke-dashoffset: -18.1; } }
+
+/* Point lumineux */
+.jeton .halo { fill: var(--accent); opacity: .2; }
+.jeton .coeur { fill: var(--surface); stroke: var(--accent); stroke-width: 3.5; }
+
+@media (prefers-reduced-motion: reduce) {
+  .flux.actif .flux-perles { animation: none; }
+  .piece, .texte > * { transition: none; }
+}
+
+</style>
+</head>
+<body>
+  <!-- Scène composée en 1920 × 1080, mise à l'échelle de l'écran par app.js -->
+  <div id="scene" class="scene">
+    <header class="haut">
+      <p class="surtitre"><span class="puce-ronde"></span><span id="surtitre"></span></p>
+      <p class="compteur" id="compteur"></p>
+    </header>
+
+    <!-- Colonne de texte -->
+    <section class="texte" id="texte" aria-live="polite">
+      <p class="rubrique" id="rubrique"></p>
+      <h1 id="titre-slide"></h1>
+      <p class="corps" id="corps"></p>
+      <div class="exemple" id="exemple">
+        <p class="micro">Dans notre exemple</p>
+        <p id="exemple-texte"></p>
+      </div>
+      <div class="hermes" id="hermes">
+        <p class="micro"><span>Dans la vraie vie · Hermes</span><span id="hermes-source"></span></p>
+        <p id="hermes-texte"></p>
+      </div>
+    </section>
+
+    <!-- Schéma : construit par app.js à partir de contenu.js -->
+    <svg id="schema" class="schema" viewBox="0 0 1920 1080" role="img" aria-label="Schéma de l'architecture agentique"></svg>
+
+    <!-- Navigation -->
+    <nav class="nav" aria-label="Navigation">
+      <button type="button" id="prec" class="rond" aria-label="Slide précédente"><svg viewBox="0 0 20 20"><path d="M12 4l-6 6 6 6"/></svg></button>
+      <div class="progression" id="progression"></div>
+      <button type="button" id="suiv" class="rond plein" aria-label="Slide suivante"><svg viewBox="0 0 20 20"><path d="M8 4l6 6-6 6"/></svg></button>
+    </nav>
+    <p class="aide"><kbd>←</kbd><kbd>→</kbd> naviguer · <kbd>F</kbd> plein écran</p>
+    <p class="source" id="source"></p>
+  </div>
+
+  <script>
+/*
+  CONTENU DE LA PRÉSENTATION — seul fichier à modifier pour changer les textes.
+  Ce qui suit « window.PRESENTATION = » est du JSON pur (guillemets doubles,
+  pas de virgule après le dernier élément).
+
+  « schema » décrit les pièces du dessin (positions en pixels, repère 1920 × 1080).
+  « slides » décrit chaque étape : textes, pièces visibles, pièces mises en avant,
+  flux animés, et le trajet du point lumineux.
+  Les encadrés « Hermes » viennent de architecture.md (section indiquée).
+*/
+window.PRESENTATION = {
+  "titre": "Comment travaille un agent IA",
+  "surtitre": "Cours · Architecture agentique",
+  "source": "Exemple réel : Hermes, dossier de passation du 15 octobre 2026",
+
+  "schema": {
+    "pieces": [
+      { "id": "user", "titre": "Vous", "sous": "une demande, un objectif", "x": 860, "y": 150, "w": 230, "h": 78 },
+      { "id": "canal", "titre": "Messagerie", "sous": "là où l'on parle à l'agent", "x": 860, "y": 268, "w": 230, "h": 78,
+        "lignes": [ { "t": "Pont vers un autre agent", "s": "en pause", "panne": true } ] },
+      { "id": "contexte", "titre": "Contexte", "sous": "ce que l'agent relit", "x": 860, "y": 430, "w": 230, "h": 226,
+        "lignes": [ { "t": "Consignes et personnalité" }, { "t": "Ce qu'il sait de vous" }, { "t": "Savoir-faire appris" }, { "t": "Échanges passés" } ] },
+      { "id": "memoire", "titre": "Mémoire longue", "sous": "notes, archives, sauvegardes", "x": 860, "y": 712, "w": 230, "h": 78,
+        "lignes": [ { "t": "Un accès Google révoqué", "s": "51 échecs", "panne": true } ] },
+      { "id": "modele", "titre": "Modèle de langage", "sous": "raisonne et propose", "x": 1255, "y": 150, "w": 230, "h": 78 },
+      { "id": "agent", "type": "boucle", "titre": "Agent", "sous": "la boucle", "cx": 1370, "cy": 470, "r": 118 },
+      { "id": "sousagents", "titre": "Sous-agents", "sous": "travaillent en parallèle", "x": 1255, "y": 712, "w": 230, "h": 120,
+        "lignes": [ { "t": "n° 1 · références web" }, { "t": "n° 2 · notes du projet" } ] },
+      { "id": "outils", "titre": "Outils", "sous": "ce que l'agent fait lui-même", "x": 1640, "y": 150, "w": 230, "h": 196,
+        "lignes": [ { "t": "Terminal et fichiers" }, { "t": "Recherche web" }, { "t": "Lecture d'images" }, { "t": "Voix de synthèse" } ] },
+      { "id": "connecteurs", "titre": "Connecteurs MCP", "sous": "des logiciels branchés", "x": 1640, "y": 396, "w": 230, "h": 196,
+        "lignes": [ { "t": "Web · Firecrawl" }, { "t": "Design · Figma" }, { "t": "3D · Blender" }, { "t": "Images · Dadaland", "s": "non branché", "panne": true } ] },
+      { "id": "sorties", "titre": "Résultats", "sous": "ce qui revient vers vous", "x": 1640, "y": 642, "w": 230, "h": 190,
+        "lignes": [ { "t": "Réponse, texte ou voix" }, { "t": "Document rédigé" }, { "t": "Images et vue 3D" } ] }
+    ],
+    "flux": [
+      { "id": "user_canal", "de": "user", "vers": "canal" },
+      { "id": "user_agent", "de": "user", "vers": "agent" },
+      { "id": "canal_agent", "de": "canal", "vers": "agent" },
+      { "id": "ctx_agent", "de": "contexte", "vers": "agent" },
+      { "id": "mem_ctx", "de": "memoire", "vers": "contexte" },
+      { "id": "agent_modele", "de": "agent", "vers": "modele", "double": true },
+      { "id": "agent_outils", "de": "agent", "vers": "outils", "double": true },
+      { "id": "agent_conn", "de": "agent", "vers": "connecteurs", "double": true },
+      { "id": "agent_sub", "de": "agent", "vers": "sousagents", "double": true },
+      { "id": "sub_conn", "de": "sousagents", "vers": "connecteurs", "double": true },
+      { "id": "agent_sorties", "de": "agent", "vers": "sorties" },
+      { "id": "agent_mem", "de": "agent", "vers": "memoire" }
+    ]
+  },
+
+  "slides": [
+    {
+      "rubrique": "Introduction",
+      "titre": "Comment travaille un agent IA",
+      "texte": "Un agent est un programme qui reçoit un objectif et enchaîne lui-même les actions pour l'atteindre. Pour comprendre comment, nous allons suivre une seule demande, du premier mot jusqu'au résultat, et ouvrir chaque boîte au passage.",
+      "visibles": ["agent"], "accent": ["agent"], "flux": [], "jeton": [], "boucle": true
+    },
+    {
+      "rubrique": "Définition",
+      "titre": "Un agent poursuit un objectif",
+      "texte": "Un assistant conversationnel répond à une question, en une fois. Un agent reçoit un objectif et avance par étapes : il cherche, lit, écrit, vérifie, et recommence tant que le travail n'est pas fini.",
+      "hermes": { "texte": "Hermes est un agent qui tourne en continu sur un serveur loué. Il sait « parler, se souvenir, exécuter, et se réveiller tout seul ».", "source": "1" },
+      "visibles": ["user", "agent", "sorties"], "accent": ["user", "agent", "sorties"],
+      "flux": ["user_agent", "agent_sorties"], "jeton": ["user_agent", "agent_sorties"], "boucle": true
+    },
+    {
+      "rubrique": "1 · La demande",
+      "titre": "Tout part d'une demande",
+      "texte": "On confie à l'agent un objectif formulé librement, à l'écrit ou à l'oral, depuis une messagerie. Pas besoin de commande précise : c'est à lui de comprendre ce qu'il faut faire.",
+      "exemple": "« Il me faut la note d'intention et une vue 3D du pavillon pour l'appel à projets, avec les références qu'on a vues, et une remise en page propre pour le jury. » Un mémo vocal de quarante secondes, envoyé depuis un téléphone.",
+      "hermes": { "texte": "Le mémo arrive par Telegram. Il est transcrit en texte sur le serveur même, sans service payant : un mémo de 8 secondes se transcrit en une dizaine de secondes.", "source": "6.1, 7.6" },
+      "visibles": ["user", "canal", "agent"], "accent": ["user", "canal"],
+      "flux": ["user_canal", "canal_agent"], "jeton": ["user_canal", "canal_agent"]
+    },
+    {
+      "rubrique": "2 · Les pièces",
+      "titre": "Un agent est un assemblage",
+      "texte": "Derrière le mot « agent », plusieurs pièces travaillent ensemble. Un modèle de langage qui raisonne, un contexte qui l'informe, des outils qui agissent, des connecteurs vers d'autres logiciels, une mémoire qui garde la trace. Nous allons les voir une par une.",
+      "hermes": { "texte": "Chez Hermes, tout tient dans un seul conteneur loué chez Railway, avec un disque de 46 Go qui survit aux redémarrages.", "source": "1, 2.1" },
+      "visibles": ["user", "canal", "contexte", "memoire", "modele", "agent", "sousagents", "outils", "connecteurs", "sorties"],
+      "accent": [], "flux": [], "jeton": []
+    },
+    {
+      "rubrique": "3 · Le contexte",
+      "titre": "Ce que l'agent relit avant d'agir",
+      "texte": "Avant chaque réponse, l'agent rassemble ce qu'il doit savoir : ses consignes et sa personnalité, ce qu'il a retenu de vous, les savoir-faire utiles, les échanges passés. Le modèle ne connaît rien d'autre que ce contexte.",
+      "exemple": "L'agent retrouve les échanges déjà eus sur le pavillon et les règles d'écriture à respecter.",
+      "hermes": { "texte": "Un fichier de consignes fixe la voix et les règles d'écriture, deux fichiers de mémoire sont relus à chaque tour, 159 savoir-faire sont disponibles et 9 597 conversations sont archivées.", "source": "8, 10.1" },
+      "visibles": ["user", "canal", "contexte", "memoire", "modele", "agent", "sousagents", "outils", "connecteurs", "sorties"],
+      "accent": ["contexte", "memoire", "agent"], "flux": ["mem_ctx", "ctx_agent"], "jeton": ["mem_ctx", "ctx_agent"]
+    },
+    {
+      "rubrique": "4 · Le modèle",
+      "titre": "Le modèle propose, l'agent exécute",
+      "texte": "Le modèle de langage lit le contexte et propose la prochaine action : répondre, chercher, écrire un fichier, déléguer. Il ne touche à rien lui-même. C'est l'agent qui exécute ce que le modèle propose, puis lui rapporte le résultat.",
+      "exemple": "Le modèle découpe la demande : trouver des références, rédiger la note, produire la vue 3D, refaire la mise en page.",
+      "hermes": { "texte": "Modèle principal : deepseek-flash, avec deux modèles de secours s'il ne répond pas. Sur 30 jours : 1,064 milliard de jetons traités, pour un coût estimé à 53,61 dollars.", "source": "5.1, 5.3" },
+      "visibles": ["user", "canal", "contexte", "memoire", "modele", "agent", "sousagents", "outils", "connecteurs", "sorties"],
+      "accent": ["modele", "agent"], "flux": ["agent_modele"], "jeton": ["agent_modele"]
+    },
+    {
+      "rubrique": "5 · La boucle",
+      "titre": "Penser, agir, observer, recommencer",
+      "texte": "L'agent tourne en boucle. Il décide de la prochaine étape, la réalise avec un outil, regarde le résultat, puis repart. La boucle s'arrête quand l'objectif est atteint, ou quand une limite fixée à l'avance est touchée.",
+      "exemple": "Chercher l'appel à projets, lire les pages trouvées, décider de la suite, écrire un premier jet, le relire.",
+      "hermes": { "texte": "Plafond fixé à 1 000 tours. Avant de modifier un fichier, l'agent en garde une copie pour pouvoir revenir en arrière.", "source": "4" },
+      "visibles": ["user", "canal", "contexte", "memoire", "modele", "agent", "sousagents", "outils", "connecteurs", "sorties"],
+      "accent": ["agent", "modele", "outils"], "flux": ["agent_modele", "agent_outils"], "jeton": ["agent_modele", "agent_outils"], "boucle": true
+    },
+    {
+      "rubrique": "6 · Les outils",
+      "titre": "Les outils, ce sont ses mains",
+      "texte": "Un outil est une action précise que l'agent sait déclencher : lancer une commande, lire ou écrire un fichier, chercher sur le web, parler à voix haute. Chaque appel renvoie un résultat, que l'agent observe avant de continuer.",
+      "exemple": "L'agent rédige la note d'intention dans un fichier, puis la relit.",
+      "hermes": { "texte": "Terminal, fichiers, recherche web, navigateur, lecture d'images, voix de synthèse en français. Aucun jeu d'outils n'est désactivé.", "source": "7.1, 7.6" },
+      "visibles": ["user", "canal", "contexte", "memoire", "modele", "agent", "sousagents", "outils", "connecteurs", "sorties"],
+      "accent": ["outils", "agent"], "flux": ["agent_outils"], "jeton": ["agent_outils"]
+    },
+    {
+      "rubrique": "7 · Les connecteurs",
+      "titre": "Brancher d'autres logiciels",
+      "texte": "Pour aller plus loin, l'agent se branche sur des logiciels extérieurs grâce à un standard, le MCP (Model Context Protocol). C'est une prise universelle : un connecteur suffit pour que l'agent sache piloter le logiciel.",
+      "exemple": "L'agent commande une vue 3D du pavillon à Blender, puis ouvre le gabarit de mise en page dans Figma.",
+      "hermes": { "texte": "Trois connecteurs branchés : Firecrawl pour le web, Figma pour le design, Blender pour la 3D. Blender tourne sur le Mac de Guillaume, joint par un tunnel sécurisé. Au total, 111 outils, chargés seulement quand il en faut un.", "source": "7.1, 7.2, 7.5" },
+      "visibles": ["user", "canal", "contexte", "memoire", "modele", "agent", "sousagents", "outils", "connecteurs", "sorties"],
+      "accent": ["connecteurs", "agent"], "flux": ["agent_conn"], "jeton": ["agent_conn"]
+    },
+    {
+      "rubrique": "8 · Déléguer",
+      "titre": "Plusieurs agents en parallèle",
+      "texte": "Pour gagner du temps, l'agent confie des sous-tâches à des sous-agents. Chacun travaille dans son propre espace, avec ses propres outils, puis rend un résultat. L'agent principal assemble.",
+      "exemple": "Le premier sous-agent cherche l'appel à projets sur le web, le second fouille les notes du projet. L'agent principal rédige pendant ce temps.",
+      "hermes": { "texte": "Jusqu'à 3 sous-agents à la fois, 600 secondes chacun, sur un modèle plus léger. Un sous-agent ne peut pas déléguer à son tour.", "source": "4" },
+      "visibles": ["user", "canal", "contexte", "memoire", "modele", "agent", "sousagents", "outils", "connecteurs", "sorties"],
+      "accent": ["sousagents", "agent", "connecteurs"], "flux": ["agent_sub", "sub_conn"], "jeton": ["agent_sub", "sub_conn"]
+    },
+    {
+      "rubrique": "9 · Livrer",
+      "titre": "Le résultat revient, la trace reste",
+      "texte": "Le travail revient vers vous : un message, un document, des images. L'agent range aussi ce qu'il a fait. Ses notes, sa mémoire et des sauvegardes lui permettront de reprendre le fil la prochaine fois.",
+      "exemple": "La note part dans un document Google, la réponse arrive dans la messagerie, les notes de travail sont sauvegardées.",
+      "hermes": { "texte": "Réponse dans Telegram, en texte ou en voix. Notes de travail poussées sur GitHub. Chaque nuit, une archive de 1,52 à 1,72 Go est déposée sur Google Drive.", "source": "6.1, 10.3, 12.1" },
+      "visibles": ["user", "canal", "contexte", "memoire", "modele", "agent", "sousagents", "outils", "connecteurs", "sorties"],
+      "accent": ["sorties", "memoire", "agent"], "flux": ["agent_sorties", "agent_mem"],
+      "jeton": ["user_canal", "canal_agent", "ctx_agent", "agent_modele", "agent_outils", "agent_conn", "agent_sorties", "agent_mem"]
+    },
+    {
+      "rubrique": "10 · Les limites",
+      "titre": "Un agent dépend de ses accès",
+      "texte": "Chaque pièce repose sur une autorisation ou un service extérieur. Qu'un accès expire ou qu'un logiciel ne soit pas encore branché, et une partie de la chaîne s'arrête, souvent en silence. D'où l'importance de surveiller ces accès et de garder un humain dans la boucle.",
+      "exemple": "Pour l'image d'ambiance, l'outil prévu n'est pas branché : l'agent remet un prompt à la place.",
+      "hermes": { "texte": "Au 15 octobre 2026 : un accès Google révoqué fait échouer une tâche automatique depuis 51 passages, le pont vers un autre agent est en pause, l'outil d'images Dadaland n'est pas encore branché.", "source": "9.1, 9.3, 9.4" },
+      "visibles": ["user", "canal", "contexte", "memoire", "modele", "agent", "sousagents", "outils", "connecteurs", "sorties"],
+      "accent": ["canal", "memoire", "connecteurs"], "flux": [], "jeton": [], "pannes": true
+    }
+  ]
+}
+
+</script>
+  <script>
+/*
+  COMMENT TRAVAILLE UN AGENT IA — slider pas à pas.
+  Aucune donnée ici : tout vient de window.PRESENTATION (contenu.js).
+  Aucune bibliothèque, aucune requête réseau.
+
+  1. Mise à l'échelle de la scène
+  2. Dessin du schéma (pièces, boucle de l'agent, flux)
+  3. Affichage d'une slide (texte, pièces visibles, flux animés, pannes)
+  4. Animations : point lumineux le long des flux, orbite de la boucle
+  5. Navigation : flèches, barre de progression, adresse (#3), plein écran
+*/
+(function () {
+  'use strict';
+
+  const P = window.PRESENTATION;
+  const NS = 'http://www.w3.org/2000/svg';
+  const mouvementReduit = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const deux = (n) => String(n).padStart(2, '0');
+
+  function cree(tag, attrs, parent) {
+    const n = document.createElementNS(NS, tag);
+    if (attrs) Object.keys(attrs).forEach((k) => { if (attrs[k] !== undefined && attrs[k] !== null) n.setAttribute(k, attrs[k]); });
+    if (parent) parent.appendChild(n);
+    return n;
+  }
+  function texte(parent, attrs, contenu) { const t = cree('text', attrs, parent); t.textContent = contenu; return t; }
+
+  /* ============ 1. Mise à l'échelle ============ */
+
+  const scene = document.getElementById('scene');
+  function ajuster() { scene.style.setProperty('--k', Math.min(innerWidth / 1920, innerHeight / 1080)); }
+  addEventListener('resize', ajuster);
+  ajuster();
+
+  /* ============ 2. Schéma ============ */
+
+  const svg = document.getElementById('schema');
+  const defs = cree('defs', null, svg);
+  const ombre = cree('filter', { id: 'ombre', x: '-20%', y: '-20%', width: '140%', height: '160%' }, defs);
+  cree('feDropShadow', { dx: 0, dy: 4, stdDeviation: 8, 'flood-color': '#14140f', 'flood-opacity': 0.07 }, ombre);
+  [['fl-repos', '#c9c8c1'], ['fl-actif', getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()]].forEach(([id, c]) => {
+    const m = cree('marker', { id: id, viewBox: '0 0 10 10', refX: 8.5, refY: 5, markerWidth: 9, markerHeight: 9, markerUnits: 'userSpaceOnUse', orient: 'auto-start-reverse' }, defs);
+    cree('path', { d: 'M1,1.5 L9,5 L1,8.5', fill: 'none', stroke: c, 'stroke-width': 1.7, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, m);
+  });
+
+  const gFlux = cree('g', null, svg);
+  const gPieces = cree('g', null, svg);
+  const gJeton = cree('g', { 'class': 'jeton', visibility: 'hidden' }, svg);
+  cree('circle', { 'class': 'halo', r: 15 }, gJeton);
+  cree('circle', { 'class': 'coeur', r: 7 }, gJeton);
+
+  const ETAPES_BOUCLE = [{ t: 'Penser', a: -90 }, { t: 'Agir', a: 30 }, { t: 'Observer', a: 150 }];
+  let boucle = null;
+  const pieces = {};
+  const HAUT_TETE = 70;     // titre + sous-titre
+  const HAUT_LIGNE = 31;
+  const HAUT_LIGNE_PANNE = 50;   // une ligne de panne porte son état sur une seconde ligne
+
+  P.schema.pieces.forEach((p) => {
+    const g = cree('g', { 'class': 'piece cachee', 'data-id': p.id }, gPieces);
+    p._g = g;
+    pieces[p.id] = p;
+    if (p.type === 'boucle') { dessinerBoucle(p, g); return; }
+    p._fond = cree('rect', { 'class': 'piece-fond', x: p.x, y: p.y, width: p.w, height: p.h, rx: 14, filter: 'url(#ombre)' }, g);
+    cree('circle', { 'class': 'piece-pastille', cx: p.x + 22, cy: p.y + 29, r: 4.5 }, g);
+    texte(g, { 'class': 'piece-titre', x: p.x + 36, y: p.y + 36 }, p.titre);
+    texte(g, { 'class': 'piece-sous', x: p.x + 36, y: p.y + 57 }, p.sous);
+    let yCourant = p.y + HAUT_TETE;
+    p._lignes = (p.lignes || []).map((l) => {
+      const y = yCourant;
+      yCourant += l.panne ? HAUT_LIGNE_PANNE : HAUT_LIGNE;
+      const gl = cree('g', { 'class': l.panne ? 'ligne-panne cachee' : 'ligne' }, g);
+      cree('line', { 'class': 'ligne-filet', x1: p.x + 18, x2: p.x + p.w - 18, y1: y + 4, y2: y + 4 }, gl);
+      if (l.panne) {
+        const c = cree('g', { 'class': 'ligne-croix', transform: 'translate(' + (p.x + 26) + ',' + (y + 20) + ')' }, gl);
+        cree('circle', { r: 7 }, c);
+        cree('path', { d: 'M-2.5,-2.5 L2.5,2.5 M2.5,-2.5 L-2.5,2.5' }, c);
+        texte(gl, { 'class': 'ligne-texte', x: p.x + 40, y: y + 25 }, l.t);
+        if (l.s) texte(gl, { 'class': 'ligne-etat', x: p.x + 40, y: y + 43 }, l.s);
+      } else {
+        texte(gl, { 'class': 'ligne-texte', x: p.x + 36, y: y + 25 }, l.t);
+      }
+      return { el: gl, panne: !!l.panne };
+    });
+  });
+
+  // Hauteur d'une carte : en-tête + lignes affichées (les lignes de panne n'apparaissent qu'à la fin)
+  function hauteur(p, pannes) {
+    if (p.type === 'boucle') return 0;
+    const lignes = (p.lignes || []).filter((l) => !l.panne || pannes);
+    if (!lignes.length) return p.h;
+    return HAUT_TETE + lignes.reduce((h, l) => h + (l.panne ? HAUT_LIGNE_PANNE : HAUT_LIGNE), 0) + 12;
+  }
+
+  // La boucle de l'agent : un anneau, trois étapes, des flèches de rotation
+  function dessinerBoucle(p, g) {
+    cree('circle', { 'class': 'anneau-fond', cx: p.cx, cy: p.cy, r: p.r + 34, filter: 'url(#ombre)' }, g);
+    cree('circle', { 'class': 'anneau', cx: p.cx, cy: p.cy, r: p.r }, g);
+    // Flèches de rotation, à mi-chemin entre deux étapes
+    [-30, 90, 210].forEach((a) => {
+      const rad = a * Math.PI / 180;
+      const x = p.cx + p.r * Math.cos(rad);
+      const y = p.cy + p.r * Math.sin(rad);
+      const tg = rad + Math.PI / 2;
+      const pointe = 'M' + (x + 7 * Math.cos(tg + Math.PI - 0.6)) + ',' + (y + 7 * Math.sin(tg + Math.PI - 0.6)) +
+        ' L' + x + ',' + y + ' L' + (x + 7 * Math.cos(tg + Math.PI + 0.6)) + ',' + (y + 7 * Math.sin(tg + Math.PI + 0.6));
+      cree('path', { 'class': 'anneau-fleche', d: pointe }, g);
+    });
+    texte(g, { 'class': 'agent-titre', x: p.cx, y: p.cy + 4, 'text-anchor': 'middle' }, p.titre);
+    texte(g, { 'class': 'agent-sous', x: p.cx, y: p.cy + 28, 'text-anchor': 'middle' }, p.sous);
+    const etapes = ETAPES_BOUCLE.map((e) => {
+      const rad = e.a * Math.PI / 180;
+      const x = p.cx + p.r * Math.cos(rad);
+      const y = p.cy + p.r * Math.sin(rad);
+      const ge = cree('g', { 'class': 'etape-boucle' }, g);
+      const w = e.t.length * 8.6 + 26;
+      cree('rect', { x: x - w / 2, y: y - 15, width: w, height: 30, rx: 15 }, ge);
+      texte(ge, { x: x, y: y + 5, 'text-anchor': 'middle' }, e.t);
+      return { el: ge, a: e.a };
+    });
+    const orb = cree('g', { visibility: 'hidden' }, g);
+    cree('circle', { 'class': 'orbite-halo', r: 13 }, orb);
+    cree('circle', { 'class': 'orbite', r: 6 }, orb);
+    boucle = { p: p, etapes: etapes, orb: orb };
+  }
+
+  // Point d'accroche d'une pièce, du côté de l'autre pièce
+  function centre(p, hauteurs) {
+    if (p.type === 'boucle') return { x: p.cx, y: p.cy };
+    return { x: p.x + p.w / 2, y: p.y + hauteurs[p.id] / 2 };
+  }
+  function accroche(p, vers, hauteurs) {
+    const c = centre(p, hauteurs);
+    if (p.type === 'boucle') {
+      const a = Math.atan2(vers.y - c.y, vers.x - c.x);
+      const r = p.r + 34;
+      return { x: c.x + r * Math.cos(a), y: c.y + r * Math.sin(a), nx: Math.cos(a), ny: Math.sin(a) };
+    }
+    const h = hauteurs[p.id];
+    const dx = vers.x - c.x;
+    const dy = vers.y - c.y;
+    if (Math.abs(dx) > p.w / 2 + 20) return { x: c.x + Math.sign(dx) * p.w / 2, y: c.y, nx: Math.sign(dx), ny: 0 };
+    return { x: c.x, y: c.y + Math.sign(dy) * h / 2, nx: 0, ny: Math.sign(dy) };
+  }
+  function trace(f, hauteurs) {
+    const a = pieces[f.de];
+    const b = pieces[f.vers];
+    const ca = centre(a, hauteurs);
+    const cb = centre(b, hauteurs);
+    const p1 = accroche(a, cb, hauteurs);
+    const p2 = accroche(b, ca, hauteurs);
+    const k = Math.max(40, Math.hypot(p2.x - p1.x, p2.y - p1.y) * 0.4);
+    return 'M' + p1.x + ',' + p1.y + ' C' + (p1.x + p1.nx * k) + ',' + (p1.y + p1.ny * k) + ' ' +
+      (p2.x + p2.nx * k) + ',' + (p2.y + p2.ny * k) + ' ' + p2.x + ',' + p2.y;
+  }
+
+  const flux = {};
+  P.schema.flux.forEach((f) => {
+    const g = cree('g', { 'class': 'flux cache' }, gFlux);
+    f._g = g;
+    f._trait = cree('path', { 'class': 'flux-trait' }, g);
+    f._perles = cree('path', { 'class': 'flux-perles' }, g);
+    flux[f.id] = f;
+  });
+
+  /* ============ 3. Affichage d'une slide ============ */
+
+  const el = (id) => document.getElementById(id);
+  const zoneTexte = el('texte');
+  let courante = -1;
+  let minuterieTexte = null;   // un seul fondu à la fois, même si l'on enchaîne les flèches
+
+  function afficher(i, instantane) {
+    i = Math.max(0, Math.min(P.slides.length - 1, i));
+    const s = P.slides[i];
+    const premiere = courante < 0;
+    courante = i;
+
+    // Texte : fondu sortant puis entrant
+    const remplir = () => {
+      el('rubrique').textContent = s.rubrique || '';
+      el('titre-slide').textContent = s.titre;
+      el('corps').textContent = s.texte;
+      el('exemple').hidden = !s.exemple;
+      el('exemple-texte').textContent = s.exemple || '';
+      el('hermes').hidden = !s.hermes;
+      el('hermes-texte').textContent = s.hermes ? s.hermes.texte : '';
+      el('hermes-source').textContent = s.hermes ? '§ ' + s.hermes.source : '';
+    };
+    clearTimeout(minuterieTexte);
+    if (premiere || instantane || mouvementReduit) { remplir(); zoneTexte.classList.remove('change'); }
+    else {
+      zoneTexte.classList.add('change');
+      minuterieTexte = setTimeout(() => { remplir(); zoneTexte.classList.remove('change'); }, 280);
+    }
+
+    // Pièces : visibles, mises en avant, en retrait
+    const visibles = new Set(s.visibles || []);
+    const accent = new Set(s.accent || []);
+    const hauteurs = {};
+    P.schema.pieces.forEach((p) => {
+      hauteurs[p.id] = hauteur(p, !!s.pannes);
+      if (p._fond) p._fond.setAttribute('height', hauteurs[p.id]);
+      p._g.classList.toggle('cachee', !visibles.has(p.id));
+      p._g.classList.toggle('accent', accent.has(p.id));
+      p._g.classList.toggle('retrait', visibles.has(p.id) && accent.size > 0 && !accent.has(p.id));
+      (p._lignes || []).forEach((l) => { if (l.panne) l.el.classList.toggle('cachee', !s.pannes); });
+      p._g.classList.toggle('en-panne', !!s.pannes && (p.lignes || []).some((l) => l.panne));
+    });
+
+    // Flux : dessinés entre pièces visibles, animés s'ils sont au cœur de la slide
+    const actifs = new Set(s.flux || []);
+    P.schema.flux.forEach((f) => {
+      const d = trace(f, hauteurs);
+      f._trait.setAttribute('d', d);
+      f._perles.setAttribute('d', d);
+      const visible = visibles.has(f.de) && visibles.has(f.vers) && (actifs.has(f.id) || accent.size === 0 || s.jeton.indexOf(f.id) >= 0 || i >= 3);
+      f._g.classList.toggle('cache', !visible);
+      f._g.classList.toggle('actif', actifs.has(f.id));
+      f._g.classList.toggle('retrait', visible && !actifs.has(f.id) && accent.size > 0);
+      const m = actifs.has(f.id) ? 'url(#fl-actif)' : 'url(#fl-repos)';
+      f._trait.setAttribute('marker-end', m);
+      f._trait.setAttribute('marker-start', f.double ? m : '');
+    });
+
+    animerJeton(s.jeton || []);
+    animerBoucle(!!s.boucle);
+    majNavigation();
+    try { history.replaceState(null, '', '#' + (i + 1)); } catch (e) { /* sans conséquence */ }
+  }
+
+  /* ============ 4. Animations ============ */
+
+  let animJeton = null;
+  function animerJeton(ids) {
+    cancelAnimationFrame(animJeton);
+    const chemins = ids.map((id) => flux[id] && flux[id]._trait).filter(Boolean);
+    if (!chemins.length) { gJeton.setAttribute('visibility', 'hidden'); return; }
+    const placer = (c, f) => { const pt = c.getPointAtLength(c.getTotalLength() * f); gJeton.setAttribute('transform', 'translate(' + pt.x + ',' + pt.y + ')'); };
+    gJeton.setAttribute('visibility', 'visible');
+    placer(chemins[0], 0);
+    if (mouvementReduit) { placer(chemins[chemins.length - 1], 1); return; }
+    const duree = 1150;
+    const pause = 700;
+    let t0 = performance.now() + 450;      // laisse le schéma apparaître
+    const pas = (t) => {
+      const e = t - t0;
+      if (e >= 0) {
+        const total = chemins.length * duree + pause;
+        const r = e % total;
+        const k = Math.min(chemins.length - 0.0001, r / duree);
+        const n = Math.floor(k);
+        const f = k - n;
+        placer(chemins[n], f < 0.5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2);
+      }
+      animJeton = requestAnimationFrame(pas);
+    };
+    animJeton = requestAnimationFrame(pas);
+  }
+
+  let animBoucle = null;
+  function animerBoucle(active) {
+    cancelAnimationFrame(animBoucle);
+    if (!boucle) return;
+    boucle.orb.setAttribute('visibility', active ? 'visible' : 'hidden');
+    boucle.etapes.forEach((e) => e.el.classList.remove('active'));
+    if (!active) return;
+    const p = boucle.p;
+    const tour = 5400;   // un tour complet de la boucle, en ms
+    const t0 = performance.now();
+    const pas = (t) => {
+      const a = (-90 + 360 * (((t - t0) % tour) / tour)) % 360;
+      const rad = a * Math.PI / 180;
+      boucle.orb.setAttribute('transform', 'translate(' + (p.cx + p.r * Math.cos(rad)) + ',' + (p.cy + p.r * Math.sin(rad)) + ')');
+      // L'étape allumée est celle que l'orbite vient de passer
+      boucle.etapes.forEach((e) => {
+        const d = ((a - e.a) % 360 + 360) % 360;
+        e.el.classList.toggle('active', d < 100);
+      });
+      if (!mouvementReduit) animBoucle = requestAnimationFrame(pas);
+    };
+    animBoucle = requestAnimationFrame(pas);
+  }
+
+  /* ============ 5. Navigation ============ */
+
+  const prog = el('progression');
+  P.slides.forEach((s, k) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.title = deux(k + 1) + ' · ' + s.titre;
+    b.setAttribute('aria-label', 'Slide ' + (k + 1) + ' : ' + s.titre);
+    b.addEventListener('click', () => afficher(k));
+    prog.appendChild(b);
+  });
+  function majNavigation() {
+    [...prog.children].forEach((b, k) => {
+      b.classList.toggle('vu', k < courante);
+      if (k === courante) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current');
+    });
+    el('prec').disabled = courante === 0;
+    el('suiv').disabled = courante === P.slides.length - 1;
+    el('compteur').innerHTML = '<b>' + deux(courante + 1) + '</b> / ' + deux(P.slides.length);
+  }
+  el('prec').addEventListener('click', () => afficher(courante - 1));
+  el('suiv').addEventListener('click', () => afficher(courante + 1));
+  document.addEventListener('keydown', (e) => {
+    if (['ArrowRight', 'PageDown', ' ', 'Enter'].indexOf(e.key) >= 0) { e.preventDefault(); afficher(courante + 1); }
+    else if (['ArrowLeft', 'PageUp', 'Backspace'].indexOf(e.key) >= 0) { e.preventDefault(); afficher(courante - 1); }
+    else if (e.key === 'Home') afficher(0);
+    else if (e.key === 'End') afficher(P.slides.length - 1);
+    else if (e.key === 'f' || e.key === 'F') {
+      if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {});
+    }
+  });
+  // Clic dans la moitié droite de l'écran : slide suivante (pratique avec une télécommande ou une souris)
+  svg.addEventListener('click', () => afficher(courante + 1));
+
+  el('surtitre').textContent = P.surtitre;
+  el('source').textContent = P.source;
+  document.title = P.titre;
+  const depart = parseInt(location.hash.slice(1), 10);
+  afficher(isNaN(depart) ? 0 : depart - 1, true);
+})();
+
+</script>
+</body>
+</html>
