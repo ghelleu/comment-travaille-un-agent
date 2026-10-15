@@ -2,7 +2,7 @@
 
 Présentation pas à pas, en 12 slides (environ 15 minutes), pour expliquer à des débutants le fonctionnement d'une architecture agentique. Un seul exemple traverse le cours : un mémo vocal qui demande une note d'intention et une vue 3D pour un appel à projets. Des encadrés « Dans la vraie vie · Hermes » montrent que chaque brique existe vraiment.
 
-**Voir la présentation : https://ghelleu.github.io/comment-travaille-un-agent/**
+**Voir la présentation : https://guillaumehelleu.com/comment-travaille-un-agent/**
 
 ![Slide 7 · la boucle](captures/slide-07.png)
 
